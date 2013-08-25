@@ -210,27 +210,26 @@ sub check_file_perms {
   my $file_mode;
   my $file_user;
   my $file_group;
-  $check_file=check_file_exists($check_file);
-  if (-f "$check_file") {
+  if ((-f "$check_file")||(-d "$check_file")) {
     $file_mode=(stat($check_file))[2];
     $file_mode=sprintf("%04o",$file_mode & 07777);
     $file_user=(stat($check_file))[4];
     $file_group=(stat($check_file))[5];
     $file_user=getpwuid($file_user);
     if ($file_mode != $check_perm) {
-      handle_output("Warning: Permission of file $check_file are not $check_perm");
+      handle_output("Warning: Permissions nf $check_file are not $check_perm");
     }
     else {
       handle_output("Permissions on $check_file are correctly set to $check_perm");
     }
     if ($file_user != $check_user) {
-      handle_output("Warning: Ownership of file $check_file is not $check_user");
+      handle_output("Warning: Ownership of $check_file is not $check_user");
     }
     else {
       handle_output("Ownership of $check_file is correctly set to $check_user");
     }
     if ($file_group != $check_group) {
-      handle_output("Warning: Group ownership of file $check_file is not $check_group");
+      handle_output("Warning: Group ownership of $check_file is not $check_group");
     }
     else {
       handle_output("Group ownership of $check_file is correctly set to $check_group");
