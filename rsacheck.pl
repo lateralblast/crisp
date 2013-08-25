@@ -4,7 +4,7 @@ use strict;
 use Getopt::Std;
 
 # Name:         rsacheck.pl
-# Version:      0.0.5
+# Version:      0.0.6
 # Release:      1
 # License:      Open Source 
 # Group:        System
@@ -25,6 +25,8 @@ use Getopt::Std;
 #               Used hashes for parameters and values in /etc/sd_pam.conf
 #               0.0.5 Sat 17 Aug 2013 11:11:23 EST
 #               Cleaned up code
+#               0.0.6 Sun 25 Aug 2013 17:02:53 EST
+#               Fixed sd_pam.conf hash
 
 my $script_name=$0;
 my $script_version=`cat $script_name | grep '^# Version' |awk '{print \$3}'`; 
@@ -44,9 +46,9 @@ my $hostip;
 my $admingroup="wheel";
 my $osname;
 my %sdpamvals=( 
-  "ENABLE_GROUP_SUPPORT" => "1",
-  "INCL_EXCL_GROUPS"     => "1",
-  "LIST_OF_GROUPS"       => "$admingroup"
+  "ENABLE_GROUP_SUPPORT" , "1",
+  "INCL_EXCL_GROUPS"     , "1",
+  "LIST_OF_GROUPS"       , "$admingroup"
 );
 
 if ($#ARGV == -1) {
