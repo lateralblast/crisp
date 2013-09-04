@@ -34,9 +34,9 @@ Then run the script:
 
 	$ ls
 	PAM-Agent_v7.1.0.149.01_14_13_00_07_15.tar.gz
-        stopts.rc
-        rsacheck.pl
-        README.md
+	stopts.rc
+	rsacheck.pl
+	README.md
 	rsainstall.pl
 
 This will check to make sure the sdopts.rec file is bundled in the tar,
