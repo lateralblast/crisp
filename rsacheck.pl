@@ -4,7 +4,7 @@ use strict;
 use Getopt::Std;
 
 # Name:         rsainstall.pl
-# Version:      0.1.4
+# Version:      0.1.6
 # Release:      1
 # License:      Open Source 
 # Group:        System
@@ -43,6 +43,10 @@ use Getopt::Std;
 #               Added code to update pam.conf and sd_pam.conf
 #               0.1.4 Thu  5 Sep 2013 06:32:25 EST
 #               Added code to create installer with packed tar file
+#               0.1.5 Fri  6 Sep 2013 08:34:16 EST
+#               Improved install script creation
+#               0.1.6 Fri  6 Sep 2013 09:37:21 EST
+#               Fixed etc directory for CSWsudo package 
 
 my $script_name=$0;
 my $work_dir=".";
@@ -56,7 +60,7 @@ my @bin_dirs=(
   "/usr/bin","/usr/sbin"
 );
 my @etc_dirs=( 
-  "/usr/local/etc", "/opt/csw/etc",
+  "/usr/local/etc", "/etc/opt/csw",
   "/usr/sfw/etc","/etc"
 );
 my %option=();
@@ -175,8 +179,13 @@ sub create_install_script {
 	my $check_file="sdconf.rec";
 	
 	if (!-e "$gz_file") {
-		print "File $tar_file does not exist\n";
-		exit;
+    if ( -e "$tar_file") {
+      system("gzip $tar_file");
+    }
+    else {
+      print "Copy $tar_file (or gzipped version) into current directory and re-run script\n";
+      exit;
+    }
 	}
 	if ($script_name=~/$install_script/) {
 		print "You should be running the original script not the packed script!\n";
