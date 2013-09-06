@@ -66,7 +66,7 @@ my @etc_dirs=(
 my %option=();
 my $host_name;
 my $host_ip;
-my $admin_group="wheel";
+my $admin_group="sysadmin";
 my $uc_admin_group=uc($admin_group);
 my $os_name;
 my %sd_pam_vals=( 
@@ -113,8 +113,8 @@ if ($option{'V'}) {
 
 if ($option{'c'}) {
   get_host_info();
-  handle_output("Hostname is $host_name");
-  handle_output("IP Address is $host_ip");
+  print "Hostname is $host_name\n";
+  print "IP Address is $host_ip\n";
   rsa_check();
   exit;
 }
@@ -138,11 +138,6 @@ if ($option{'I'}) {
   exit;
 }
 
-sub handle_output {
-  my $output=$_[0];
-  print "$output\n";
-}
-
 sub print_usage {
   print "\n";
   print "Usage: $script_name -$options\n";
@@ -164,21 +159,20 @@ sub get_host_info {
   $host_name=`hostname`;
   chomp($host_name);
   $host_ip=`cat /etc/hosts |awk '{print \$1" "\$2}' |grep '$host_name'`;
-	if ($host_ip=~/\./) {
-  	$host_ip=`cat /etc/hosts |awk '{print \$1" "\$3}' |grep '$host_name'`;
-	}
-	($host_ip,$host_name)=split(/\s+/,$host_ip);
+  if ($host_ip=~/\./) {
+    $host_ip=`cat /etc/hosts |awk '{print \$1" "\$3}' |grep '$host_name'`;
+  }
+  ($host_ip,$host_name)=split(/\s+/,$host_ip);
   chomp($host_ip);
   return;
 }
 
 sub create_install_script {
   my $tar_file="$work_dir/$pam_name".".tar";
-  my $gz_file="$work_dir/$tar_file".".gz";
-	my $key_check;
-	my $check_file="sdconf.rec";
-	
-	if (!-e "$gz_file") {
+  my $gz_file="$tar_file".".gz";
+  my $key_check;
+  my $check_file="sdconf.rec";
+  if (!-e "$gz_file") {
     if ( -e "$tar_file") {
       system("gzip $tar_file");
     }
@@ -186,23 +180,23 @@ sub create_install_script {
       print "Copy $tar_file (or gzipped version) into current directory and re-run script\n";
       exit;
     }
-	}
-	if ($script_name=~/$install_script/) {
-		print "You should be running the original script not the packed script!\n";
-		exit;
-	}
-	$key_check=`gzcat $gz_file |tar -tf - |grep $check_file`;	
-	if ($key_check!~/$check_file/) {
-		if (! -e "$check_file") {
-			print "Copy $check_file into current directory and re-run script\n";
-			exit;
-		}
-		print "File $check_file not in archive\n";
-		print "Adding $check_file to archive\n";
-		system("gzip -d $gz_file");
-		system("tar -rf $tar_file $check_file");
-		system("gzip $tar_file");
-	}
+  }
+  if ($script_name=~/$install_script/) {
+    print "You should be running the original script not the packed script!\n";
+    exit;
+  }
+  $key_check=`gzip -dc $gz_file |tar -tf - |grep $check_file`;  
+  if ($key_check!~/$check_file/) {
+    if (! -e "$check_file") {
+      print "Copy $check_file into current directory and re-run script\n";
+      exit;
+    }
+    print "File $check_file not in archive\n";
+    print "Adding $check_file to archive\n";
+    system("gzip -d $gz_file");
+    system("tar -rf $tar_file $check_file");
+    system("gzip $tar_file");
+  }
   system("cp $script_name $work_dir/$install_script");
   system("cat $gz_file >> $work_dir/$install_script");
   return;
@@ -218,47 +212,59 @@ sub extract_file {
         print OUTFILE $_;
       }
     }
-    if (-e "$gz_file") {
-      system("cd $tmp_dir ; gzip -d $gz_file");
+    if (! -e "$tar_file") {
+      if (-e "$gz_file") {
+        system("cd $tmp_dir ; gzip -d $gz_file");
+      }
     }
     if ( -e "$tar_file") {
       system("cd $tmp_dir ; tar -xpf $tar_file");
-			system("cd $ins_dir ; cat install_pam.sh |sed 's/^startup_screen\$/#&/g' > install_pam.sh.new");
-			system("cd $ins_dir ; cat install_pam.sh.new > install_pam.sh");
+      system("cd $ins_dir ; cat install_pam.sh |sed 's/^startup_screen\$/#&/g' > install_pam.sh.new");
+      system("cd $ins_dir ; cat install_pam.sh.new > install_pam.sh");
     }
+  }
+  if (-e "$ins_dir") {
+    var_ace_check();
+  }
+  else {
+    print "Directory $ins_dir does not exist\n";
   }
   return;
 }
 
 sub uninstall_rsa {
+  my $sudoers=get_sudoers();
   if (-e "$pam_dir") {
-		system("$pam_dir/uninstall_pam.sh <<-UNINSTALL
-			
-			y
-			y
-			y
-			UNINSTALL");
+    system("$pam_dir/uninstall_pam.sh <<-UNINSTALL
+      
+      y
+      y
+      y
+      UNINSTALL");
   }
+  sudo_passwd_check($sudoers);
+  pam_sudo_check();
 }
 
 sub install_rsa {
   if (-e "$ins_dir") {
     system("$ins_dir/install_pam.sh <<-INSTALL
-				
-			
-			 
-			INSTALL");
+        
+      
+       
+      INSTALL");
   }
+  install_clean_up();
 }
 
 sub sudo_pam_check {
   my $sudo_bin=$_[0];
   my $sudo_pam=`strings $sudo_bin |grep pam`;
   if ($sudo_pam=~/with\-pam|libpam/) {
-    handle_output("Sudo has PAM support");
+    print "Sudo has PAM support\n";
   }
   else {
-    handle_output("Warning: Sudo does not have PAM support");
+    print "Warning: Sudo does not have PAM support\n";
   }
 }
 
@@ -270,11 +276,11 @@ sub check_file_exists {
     }
   }
   if (! -f "$file_name") {
-    handle_output("Warning: File $file_name does not exist");
+    print "Warning: File $file_name does not exist\n";
     return("");
   }
   else {
-    handle_output("File $file_name exists");
+    print "File $file_name exists\n";
     return($file_name);
   }
 }
@@ -287,24 +293,29 @@ sub check_dir_exists {
     }
   }
   if (! -d "$dir_name") {
-    handle_output("Warning: Directory $dir_name does not exist");
+    print "Warning: Directory $dir_name does not exist\n";
     return("");
   }
   else {
-    handle_output("Directory $dir_name exists");
+    print "Directory $dir_name exists\n";
     return($dir_name);
   }
 }
 
 sub ace_status_check {
-  my $ace_status="$pam_dir/bin/32bit/acestatus";
+  my $ace_status="$pam_dir/bin/64bit/acestatus";
   my $ace_status=check_file_exists($ace_status);
   my @ace_output;
   my $line;
+  if (! -e "$ace_status") {
+    $ace_status=~s/64/32/g;
+    $ace_status=check_file_exists($ace_status);
+  }
   if (-f "$ace_status") {
     @ace_output=`$ace_status 2>&1`;
     foreach $line (@ace_output) {
-      handle_output($line);
+      chomp($line);
+      print "$line\n";
     }
   }
 }
@@ -335,7 +346,7 @@ sub sd_pam_check {
           $results{$hash_param}=1;
           ($line_param,$line_value)=split("=",$line);
           if ($line_value!~/^$hash_value/) {
-            handle_output("Parameter $hash_param correctly set to $hash_value");
+            print "Parameter $hash_param correctly set to $hash_value\n";
           }
           else {
             $change=1;
@@ -353,7 +364,7 @@ sub sd_pam_check {
     if (!$option{'f'}) {
       while (($hash_param,$hash_value)=each(%results)) {
         if ($hash_value == 0) {
-          handle_output("File $sd_pam_file does not contain $hash_value");
+          print "File $sd_pam_file does not contain $hash_value\n";
         }
       }
     }
@@ -384,34 +395,34 @@ sub check_file_perms {
     $file_group=(stat($check_file))[5];
     $file_user=getpwuid($file_user);
     if ($file_mode != $check_perm) {
-      handle_output("Warning: Permissions nf $check_file are not $check_perm");
+      print "Warning: Permissions nf $check_file are not $check_perm\n";
       if ($option{'f'}) {
-        handle_output("Fixing");
+        print "Fixing\n";
         system("chmod $check_perm $check_file");
       }
     }
     else {
-      handle_output("Permissions on $check_file are correctly set to $check_perm");
+      print "Permissions on $check_file are correctly set to $check_perm\n";
     }
     if ($file_user != $check_user) {
-      handle_output("Warning: Ownership of $check_file is not $check_user");
+      print "Warning: Ownership of $check_file is not $check_user\n";
       if ($option{'f'}) {
-        handle_output("Fixing");
+        print "Fixing\n";
         system("chown $check_user $check_file");
       }
     }
     else {
-      handle_output("Ownership of $check_file is correctly set to $check_user");
+      print "Ownership of $check_file is correctly set to $check_user\n";
     }
     if ($file_group != $check_group) {
-      handle_output("Warning: Group ownership of $check_file is not $check_group");
+      print "Warning: Group ownership of $check_file is not $check_group\n";
       if ($option{'f'}) {
-        handle_output("Fixing");
+        print "Fixing\n";
         system("chgrp $check_group $check_file");
       }
     }
     else {
-      handle_output("Group ownership of $check_file is correctly set to $check_group");
+      print "Group ownership of $check_file is correctly set to $check_group\n";
     }
   }
   return;
@@ -428,32 +439,33 @@ sub check_sdopts {
   check_file_perms($ace_dir,"root","root","750");
   if (-f "$sdopts_file") {
     $file_info=`cat $sdopts_file |head -1`;
-    handle_output("File $sdopts_file contains:");
-    handle_output($file_info);
+    print "File $sdopts_file contains:\n";
+    print "$file_info\n";
     if ($file_info!~/$host_ip/) {
-      handle_output("File $sdopts_file contains incorrect IP");
-      handle_output("Entry should be: $sdopts_line\n");
+      print "File $sdopts_file contains incorrect IP\n";
+      print "Entry should be: $sdopts_line\n";
       if ($option{'f'}) {
-        handle_output("Fixing $sdopts_file");
+        print "Fixing $sdopts_file\n";
         open(OUTPUT,">",$sdopts_file);
         print OUTPUT "$sdopts_line\n";
         close(OUTPUT)
       }
     }
     else {
-      handle_output("File $sdopts_file contains correct IP");
+      print "File $sdopts_file contains correct IP\n";
     }
   }
 }
 
 sub var_ace_check {
-	my $tmp_file="/tmp/sdopts.rec";
+  my $tmp_file="/tmp/sdconf.rec";
   $ace_dir=check_dir_exists($ace_dir);
-	if ($option{'f'}) {
-		if (!-e "$sdconf_file") {
-			system("cp $tmp_file $sdconf_file");
-		}
-	}
+  if ($option{'f'}) {
+    if (!-e "$sdconf_file") {
+      system("cp $tmp_file $sdconf_file");
+      system("rm $tmp_file");
+    }
+  }
   $sdconf_file=check_file_exists($sdconf_file);
   $sdopts_file=check_file_exists($sdopts_file);
   check_file_perms($sdconf_file,"root","root","640");
@@ -464,6 +476,7 @@ sub var_ace_check {
 
 sub pam_sudo_check {
   my $pam_file;
+  my $tmp_file="/tmp/pam.sudo";
   my $pam_check;
   my @file_info;
   my $line;
@@ -473,26 +486,42 @@ sub pam_sudo_check {
   else {
     $pam_file="/etc/pam.conf";
   }
-  if (-f "$pam_file") {
-    $pam_check=`cat $pam_file |grep securid |grep -v '^#'`;
-    if ($pam_check=~/securid/) {
-      handle_output("RSA SecurID PAM Agent enabled");
-      handle_output("File $pam_file contains:");
-      handle_output($pam_check);
+  if ($option{'u'}) {
+    if (-e "$pam_file.prersa") {
+      print "Restoring $pam_file\n";
+      system("cat $pam_file.prersa > $pam_file");
+      system("rm $pam_file.prersa");
+      exit;
     }
-    else {
-      handle_output("File $pam_file does not contain securid");
-      if ($option{'f'}) {
-        handle_output("Fixing $pam_file");
-        system("cp $pam_file $pam_file.prersa");
-        open(OUTPUT,">>",$pam_file);
-        if ($os_name=~/Linux/) {
-          print OUTPUT "auth\trequired\tpam_securid.so reserve\n";
+  }
+  else {
+    if (-f "$pam_file") {
+      $pam_check=`cat $pam_file |grep securid |grep -v '^#'`;
+      if ($pam_check=~/securid/) {
+        print "RSA SecurID PAM Agent enabled\n";
+        print "File $pam_file contains:\n";
+        print "$pam_check\n";
+      }
+      else {
+        print "File $pam_file does not contain securid\n";
+        if ($option{'f'}) {
+          print "Fixing $pam_file\n";
+          system("cp $pam_file $pam_file.prersa");
+          exit;
+          if ($os_name=~/Linux/) {
+            system("cat $pam_file |sed 's/^auth/#\&/' > $tmp_file");
+            system("cat $tmp_file > $pam_file");
+            system("tm $tmp_file");
+          }
+          open(OUTPUT,">>",$pam_file);
+          if ($os_name=~/Linux/) {
+            print OUTPUT "auth\trequired\tpam_securid.so reserve\n";
+          }
+          else {
+            print OUTPUT "sudo\tauth\trequired\tpam_securid.so reserve\n";
+          }
+          close(OUPUT);
         }
-        else {
-          print OUTPUT "sudo\tauth\trequired\tpam_securid.so reserve\n";
-        }
-        close(OUPUT);
       }
     }
   }
@@ -510,33 +539,72 @@ sub sudo_group_check {
   if (-f "$sudoers") {
     $group_check=`cat $sudoers |grep '\%$admin_group' |grep -v '^#'`;
     if ($group_check!~/$admin_group/) {
-      handle_output("File $sudoers does not contain a \%$admin_group entry");
+      print "File $sudoers does not contain a \%$admin_group entry\n";
       $group_check=`cat $sudoers |grep $uc_admin_group |grep -v '^#'`;
       if ($group_check=~/$uc_admin_group/) {
-        handle_output("File $sudoers contains and old style $uc_admin_group group which should be migrated to \%$admin_group");
+        print "File $sudoers contains and old style $uc_admin_group group which should be migrated to \%$admin_group\n";
       }
     }
     else {
-      handle_output("File $sudoers contains a \%$admin_group entry");
-      handle_output($group_check);
+      print "File $sudoers contains a \%$admin_group entry\n";
+      print "$group_check\n";
+    }
+  }
+  return;
+}
+
+sub sudo_passwd_check {
+  my $sudoers=$_[0];
+  my $sudotmp="/tmp/sudoers";
+  my $passwd_check;
+  if ($option{'u'}) {
+    if (-e "$sudoers.prersa") {
+      print "Restoring $sudoers\n";
+      system("cat $sudoers.prersa > $sudoers");
+      system("rm $sudoers.prersa");
+    }
+  }
+  else {
+    if (-e "$sudoers") {
+      $passwd_check=`cat $sudoers |grep '\%$admin_group' |grep 'NOPASSWD' |grep -v '^#'`;
+      if ($passwd_check=~/NOPASSWD/) {
+        print "File $sudoers contains a NOPASSWD entry\n";
+        if ($option{'f'}) {
+          print "Fixing $sudoers\n";
+          if (! -e "$sudoers.prersa") {
+            system("cp -p $sudoers $sudoers.prersa");
+          }
+          system("cat $sudoers |sed 's/NOPASSWD/PASSWD/g' > $sudotmp");	
+          system("cat $sudotmp > $sudoers");
+          system("rm $sudotmp");
+        }
+      }
+    }
+    else {
+      print "File $sudoers requires a password to escalate privileges\n";
     }
   }
   return;
 }
 
 sub etc_group_check {
+  my $sudoers;
   my $groupfile="/etc/group";
   my $group_check=`cat $groupfile |grep '^$admin_group'`;
   if ($group_check!~/$admin_group/) {
-    handle_output("File $groupfile does not contain a $admin_group group entry");
+    print "File $groupfile does not contain a $admin_group group entry\n";
   }
   else {
     $group_check=`cat $groupfile |grep '^$admin_group' |cut -f4 -d:`;
     if ($group_check!~/[A-z]/) {
-      handle_output("File $groupfile has no members in $admin_group");
+      print "File $groupfile has no members in $admin_group\n";
     }
     else {
-      handle_output("File $groupfile contains a $admin_group group with members");
+      print "File $groupfile contains a $admin_group group with members\n";
+      if ($option{'f'}) {
+        $sudoers=get_sudoers();
+        sudo_passwd_check($sudoers);
+      }
     }
   }
 }
@@ -547,7 +615,10 @@ sub rsa_check {
   sudo_pam_check($sudo_bin);
   sudo_group_check($sudoers);
   etc_group_check();
-  var_ace_check();
+  if (!$option{'i'}) {
+    sudo_passwd_check($sudoers);
+    var_ace_check();
+  }
   opt_pam_check();
   pam_sudo_check();
   sd_pam_check();
@@ -564,7 +635,7 @@ sub get_sudoers {
     $sudoetc="$etc_dir/sudoers";
     if (-f "$sudoetc") {
       if ($option{'c'}) {
-        handle_output("Sudoers file found at $sudoetc");
+        print "Sudoers file found at $sudoetc\n";
       }
       return($sudoetc);
     }
@@ -579,10 +650,15 @@ sub get_sudo_bin {
     $sudo_bin="$bin_dir/sudo";
     if (-f "$sudo_bin") {
       if ($option{'c'}) {
-        handle_output("Sudo found at $sudo_bin");
+        print "Sudo found at $sudo_bin\n";
       }
       return($sudo_bin);
     }
   }
 }
+
+sub install_clean_up {
+  system("rm -rf /tmp/PAM*");
+}
+
 __DATA__
