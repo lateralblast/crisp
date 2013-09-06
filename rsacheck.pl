@@ -4,7 +4,7 @@ use strict;
 use Getopt::Std;
 
 # Name:         rsainstall.pl
-# Version:      0.1.6
+# Version:      0.1.7
 # Release:      1
 # License:      Open Source 
 # Group:        System
@@ -47,6 +47,8 @@ use Getopt::Std;
 #               Improved install script creation
 #               0.1.6 Fri  6 Sep 2013 09:37:21 EST
 #               Fixed etc directory for CSWsudo package 
+#               0.1.7 Fri  6 Sep 2013 16:53:29 EST
+#               Improved installation and uninstallation
 
 my $script_name=$0;
 my $work_dir=".";
