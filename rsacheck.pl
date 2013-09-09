@@ -4,7 +4,7 @@ use strict;
 use Getopt::Std;
 
 # Name:         rsainstall.pl
-# Version:      0.1.8
+# Version:      0.1.9
 # Release:      1
 # License:      Open Source 
 # Group:        System
@@ -51,6 +51,8 @@ use Getopt::Std;
 #               Improved installation and uninstallation
 #               0.1.8 Mon  9 Sep 2013 08:57:40 EST
 #               Improved user feedback messages
+#               0.1.9 Mon  9 Sep 2013 11:38:12 EST
+#               Updated documentation
 
 my $script_name=$0;
 my $work_dir=".";
@@ -123,6 +125,8 @@ if ($option{'c'}) {
   exit;
 }
 
+# If running in install mode, set the fix flag to 1
+
 if ($option{'i'}) {
   $option{'f'}=1;
   get_host_info();  
@@ -132,15 +136,21 @@ if ($option{'i'}) {
   exit;
 }
 
+# If given -u uninstall
+
 if ($option{'u'}) {
   uninstall_rsa();
   exit;
 }
 
+# If give -I create installer script
+
 if ($option{'I'}) {
   create_install_script();
   exit;
 }
+
+# Subroutine to print usage
 
 sub print_usage {
   print "\n";
@@ -157,6 +167,8 @@ sub print_usage {
   return;
 }
 
+# Subroutine to get host information
+
 sub get_host_info {
   $os_name=`uname`;
   chomp($os_name);
@@ -171,11 +183,16 @@ sub get_host_info {
   return;
 }
 
+# Subroutine to create installer script
+# This creates a copy of the script and embeds the tar.gz to the end of it
+
 sub create_install_script {
   my $tar_file="$work_dir/$pam_name".".tar";
   my $gz_file="$tar_file".".gz";
   my $key_check;
   my $check_file="sdconf.rec";
+  # Check the the PAM Agent .tar.gz file exists
+  # If the gz file doesn't exist but the tar does, gzip the tar
   if (!-e "$gz_file") {
     if ( -e "$tar_file") {
       system("gzip $tar_file");
@@ -185,48 +202,62 @@ sub create_install_script {
       exit;
     }
   }
+  # Check that we are not running the created script
   if ($script_name=~/$install_script/) {
     print "You should be running the original script not the packed script!\n";
     exit;
   }
+  # Check whether the server config file (stdconf.rec) is in the .tar.gz
+  # This file is required for the install
   $key_check=`gzip -dc $gz_file |tar -tf - |grep $check_file`;  
   if ($key_check!~/$check_file/) {
     if (! -e "$check_file") {
       print "Copy $check_file into current directory and re-run script\n";
       exit;
     }
+    # If the file is not in the archive, then add it for the current directory
     print "File $check_file not in archive\n";
     print "Adding $check_file to archive\n";
     system("gzip -d $gz_file");
     system("tar -rf $tar_file $check_file");
     system("gzip $tar_file");
   }
+  # Copy the script and embed the .tar.gz at the end
   system("cp $script_name $work_dir/$install_script");
   system("cat $gz_file >> $work_dir/$install_script");
   return;
 }
 
+# Subroutine to extract the .tar.gz from the install script
+
 sub extract_file {
   my $tar_file="$tmp_dir/$pam_name".".tar";
   my $gz_file="$tar_file".".gz";
+  # Check to see it hasn't already been extracted
+  # Useful for testing purposes to not have to extract every time
+  # In this case disable the clean up subroutine
   if (! -e "$ins_dir") {
+    # Extract the .tar.gz from the script
     if (! -e "$gz_file") {
       open(OUTFILE,">","$gz_file");
       while (<DATA>) {
         print OUTFILE $_;
       }
     }
+    # Extract the .tar for the .tar.gz
     if (! -e "$tar_file") {
       if (-e "$gz_file") {
         system("cd $tmp_dir ; gzip -d $gz_file");
       }
     }
+    # Untar the tar file and fix the installer script to ignore the license message
     if ( -e "$tar_file") {
       system("cd $tmp_dir ; tar -xpf $tar_file");
       system("cd $ins_dir ; cat install_pam.sh |sed 's/^startup_screen\$/#&/g' > install_pam.sh.new");
       system("cd $ins_dir ; cat install_pam.sh.new > install_pam.sh");
     }
   }
+  # Check /var/ace
   if (-e "$ins_dir") {
     var_ace_check();
   }
@@ -235,6 +266,9 @@ sub extract_file {
   }
   return;
 }
+
+# Subroutine to run the uninstall script
+# Uses a here doc to answer the questions
 
 sub uninstall_rsa {
   my $sudoers=get_sudoers();
@@ -250,6 +284,9 @@ sub uninstall_rsa {
   pam_sudo_check();
 }
 
+# Subroutine to run the install script
+# Uses a here doc to answer the questions
+
 sub install_rsa {
   if (-e "$ins_dir") {
     system("$ins_dir/install_pam.sh <<-INSTALL
@@ -261,6 +298,8 @@ sub install_rsa {
   install_clean_up();
 }
 
+# Subroutine to check that sudo is compiled with PAM support
+
 sub sudo_pam_check {
   my $sudo_bin=$_[0];
   my $sudo_pam=`strings $sudo_bin |grep pam`;
@@ -271,6 +310,8 @@ sub sudo_pam_check {
     print "Warning: Sudo does not have PAM support\n";
   }
 }
+
+# Subroutine to check a file exists
 
 sub check_file_exists {
   my $file_name=$_[0];
@@ -289,6 +330,8 @@ sub check_file_exists {
   }
 }
 
+# Subrouting to check a directory exists
+
 sub check_dir_exists {
   my $dir_name=$_[0];
   if ($option{'f'}) {
@@ -305,6 +348,8 @@ sub check_dir_exists {
     return($dir_name);
   }
 }
+
+# Subroutine to run acestatus
 
 sub ace_status_check {
   my $ace_status="$pam_dir/bin/64bit/acestatus";
@@ -323,6 +368,8 @@ sub ace_status_check {
     }
   }
 }
+
+# Subroutine to check entries in /etc/sd_pam.conf
 
 sub sd_pam_check {
   my $sd_pam_file="/etc/sd_pam.conf";
@@ -384,6 +431,8 @@ sub sd_pam_check {
   }
 }
 
+# Subroutine to check file permissions
+
 sub check_file_perms {
   my $check_file=$_[0];
   my $check_user=$_[1];
@@ -432,6 +481,9 @@ sub check_file_perms {
   return;
 }
 
+# Subroutine to check /var/ace/sdopts.rec
+# Creates it if run in fix mode
+
 sub check_sdopts {
   my $file_info;
   my $sdopts_line="CLIENT_IP=$host_ip";
@@ -461,9 +513,13 @@ sub check_sdopts {
   }
 }
 
+# Subroutine to check that /var/ace exists
+# and the correct files and permissions are in place
+
 sub var_ace_check {
   my $tmp_file="/tmp/sdconf.rec";
   $ace_dir=check_dir_exists($ace_dir);
+  # If running installer copy the sdconf.rec file into place
   if ($option{'f'}) {
     if (!-e "$sdconf_file") {
       system("cp $tmp_file $sdconf_file");
@@ -477,6 +533,8 @@ sub var_ace_check {
   check_sdopts();
   return;
 }
+
+# Subroutine to check that sudo directive for RSA is in PAM config file
 
 sub pam_sudo_check {
   my $pam_file;
@@ -532,10 +590,14 @@ sub pam_sudo_check {
   return;
 }
 
+# Subroutine to check if /opt/pam exists
+
 sub opt_pam_check {
   $pam_dir=check_dir_exists($pam_dir);
   return;
 }
+
+# Subroutine to check that we have a sudoers group entry that points to /etc/group
 
 sub sudo_group_check {
   my $sudoers=$_[0];
@@ -557,6 +619,9 @@ sub sudo_group_check {
   return;
 }
 
+# Subroutine to check that sudoers file requires a password 
+# to escalate privileges (ie no NOPASSWD entry)
+
 sub sudo_passwd_check {
   my $sudoers=$_[0];
   my $sudotmp="/tmp/sudoers";
@@ -573,6 +638,7 @@ sub sudo_passwd_check {
       $passwd_check=`cat $sudoers |grep '\%$admin_group' |grep 'NOPASSWD' |grep -v '^#'`;
       if ($passwd_check=~/NOPASSWD/) {
         print "File $sudoers contains a NOPASSWD entry\n";
+        # If running in fix mode take a copt of sudoers and fix NOPASSWD
         if ($option{'f'}) {
           print "Fixing $sudoers\n";
           if (! -e "$sudoers.prersa") {
@@ -590,6 +656,8 @@ sub sudo_passwd_check {
   }
   return;
 }
+
+# Subroutine to check /etc/group has a entry for the admin/wheel group
 
 sub etc_group_check {
   my $sudoers;
@@ -613,6 +681,8 @@ sub etc_group_check {
   }
 }
 
+# Main subroutine
+
 sub rsa_check {
   my $sudo_bin=get_sudo_bin();
   my $sudoers=get_sudoers();
@@ -630,6 +700,9 @@ sub rsa_check {
   return;
 }
 
+# Subroutine to find location of sudoers
+# This is reauired as different Solaris packages install n different places
+
 sub get_sudoers {
   my $etc_dir;
   my $sudoetc;
@@ -646,6 +719,9 @@ sub get_sudoers {
   }
 }
 
+# Subroutine to find location of sudo
+# This is reauired as different Solaris packages install n different places
+
 sub get_sudo_bin {
   my $bin_dir;
   my $sudo_bin;
@@ -661,8 +737,12 @@ sub get_sudo_bin {
   }
 }
 
+# Subroutine to clean up
+
 sub install_clean_up {
   system("rm -rf /tmp/PAM*");
 }
+
+# .tar.gz gets embedded after this
 
 __DATA__
