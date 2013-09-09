@@ -4,7 +4,7 @@ use strict;
 use Getopt::Std;
 
 # Name:         rsainstall.pl
-# Version:      0.2.0
+# Version:      0.2.1
 # Release:      1
 # License:      Open Source 
 # Group:        System
@@ -55,6 +55,8 @@ use Getopt::Std;
 #               Updated documentation
 #               0.2.0 Mon  9 Sep 2013 12:24:30 EST
 #               Fixed creation of /var/ace/sdopts.rec
+#               0.2.1 Mon  9 Sep 2013 12:27:11 EST
+#               Improved determination of IP
 
 my $script_name=$0;
 my $work_dir=".";
@@ -176,9 +178,9 @@ sub get_host_info {
   chomp($os_name);
   $host_name=`hostname`;
   chomp($host_name);
-  $host_ip=`cat /etc/hosts |awk '{print \$1" "\$2}' |grep '$host_name'`;
+  $host_ip=`cat /etc/hosts |grep -v localhost |awk '{print \$1" "\$2}' |grep '$host_name'`;
   if ($host_ip=~/\./) {
-    $host_ip=`cat /etc/hosts |awk '{print \$1" "\$3}' |grep '$host_name'`;
+    $host_ip=`cat /etc/hosts |grep -v localhost |awk '{print \$1" "\$3}' |grep '$host_name'`;
   }
   ($host_ip,$host_name)=split(/\s+/,$host_ip);
   chomp($host_ip);
