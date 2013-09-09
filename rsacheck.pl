@@ -4,7 +4,7 @@ use strict;
 use Getopt::Std;
 
 # Name:         rsainstall.pl
-# Version:      0.1.7
+# Version:      0.1.8
 # Release:      1
 # License:      Open Source 
 # Group:        System
@@ -49,6 +49,8 @@ use Getopt::Std;
 #               Fixed etc directory for CSWsudo package 
 #               0.1.7 Fri  6 Sep 2013 16:53:29 EST
 #               Improved installation and uninstallation
+#               0.1.8 Mon  9 Sep 2013 08:57:40 EST
+#               Improved user feedback messages
 
 my $script_name=$0;
 my $work_dir=".";
@@ -357,7 +359,7 @@ sub sd_pam_check {
                 system("cp $sd_pam_file $sd_pam_file.prersa");
               }
               $line=~s/$line_value/$hash_value/;
-              @file_info[$counter]="$line\n";
+              @file_info[$counter]=$line;
             }
           }
         }
@@ -374,7 +376,7 @@ sub sd_pam_check {
       if ($change eq 1) {
         open (OUTPUT,">",$sd_pam_file);
         foreach $line (@file_info) {
-          print OUTPUT $line;
+          print OUTPUT "$line\n";
         }
         close (OUTPUT);
       }
@@ -399,7 +401,7 @@ sub check_file_perms {
     if ($file_mode != $check_perm) {
       print "Warning: Permissions nf $check_file are not $check_perm\n";
       if ($option{'f'}) {
-        print "Fixing\n";
+        print "Fixing permissions on $check_file\n";
         system("chmod $check_perm $check_file");
       }
     }
@@ -409,7 +411,7 @@ sub check_file_perms {
     if ($file_user != $check_user) {
       print "Warning: Ownership of $check_file is not $check_user\n";
       if ($option{'f'}) {
-        print "Fixing\n";
+        print "Fixing ownership of $check_file\n";
         system("chown $check_user $check_file");
       }
     }
@@ -419,7 +421,7 @@ sub check_file_perms {
     if ($file_group != $check_group) {
       print "Warning: Group ownership of $check_file is not $check_group\n";
       if ($option{'f'}) {
-        print "Fixing\n";
+        print "Fixing group ownership of $check_file\n";
         system("chgrp $check_group $check_file");
       }
     }
