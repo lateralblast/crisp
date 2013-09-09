@@ -4,7 +4,7 @@ use strict;
 use Getopt::Std;
 
 # Name:         rsainstall.pl
-# Version:      0.1.9
+# Version:      0.2.0
 # Release:      1
 # License:      Open Source 
 # Group:        System
@@ -53,6 +53,8 @@ use Getopt::Std;
 #               Improved user feedback messages
 #               0.1.9 Mon  9 Sep 2013 11:38:12 EST
 #               Updated documentation
+#               0.2.0 Mon  9 Sep 2013 12:24:30 EST
+#               Fixed creation of /var/ace/sdopts.rec
 
 my $script_name=$0;
 my $work_dir=".";
@@ -316,11 +318,11 @@ sub sudo_pam_check {
 sub check_file_exists {
   my $file_name=$_[0];
   if ($option{'f'}) {
-    if (! -f "$file_name") {
+    if (! -e "$file_name") {
       system("tocuh $file_name");
     }
   }
-  if (! -f "$file_name") {
+  if (! -e "$file_name") {
     print "Warning: File $file_name does not exist\n";
     return("");
   }
@@ -360,7 +362,7 @@ sub ace_status_check {
     $ace_status=~s/64/32/g;
     $ace_status=check_file_exists($ace_status);
   }
-  if (-f "$ace_status") {
+  if (-e "$ace_status") {
     @ace_output=`$ace_status 2>&1`;
     foreach $line (@ace_output) {
       chomp($line);
@@ -387,7 +389,7 @@ sub sd_pam_check {
   while (($hash_param,$hash_value)=each(%sd_pam_vals)) {
     $results{$hash_param}=0;
   }
-  if (-f "$sd_pam_file") {
+  if (-e "$sd_pam_file") {
     @file_info=`cat $sd_pam_file`;
     for ($counter=0; $counter<@file_info; $counter++) {
       $line=@file_info[$counter];
@@ -441,7 +443,7 @@ sub check_file_perms {
   my $file_mode;
   my $file_user;
   my $file_group;
-  if ((-f "$check_file")||(-d "$check_file")) {
+  if ((-e "$check_file")||(-d "$check_file")) {
     $file_mode=(stat($check_file))[2];
     $file_mode=sprintf("%04o",$file_mode & 07777);
     $file_user=(stat($check_file))[4];
@@ -488,12 +490,12 @@ sub check_sdopts {
   my $file_info;
   my $sdopts_line="CLIENT_IP=$host_ip";
   if ($option{'f'}) {
-    if (! -f "$sdopts_file") {
+    if (! -e "$sdopts_file") {
       system("touch $sdopts_file");
     }
   }
   check_file_perms($ace_dir,"root","root","750");
-  if (-f "$sdopts_file") {
+  if (-e "$sdopts_file") {
     $file_info=`cat $sdopts_file |head -1`;
     print "File $sdopts_file contains:\n";
     print "$file_info\n";
@@ -511,6 +513,15 @@ sub check_sdopts {
       print "File $sdopts_file contains correct IP\n";
     }
   }
+  else {
+    if ($option{'f'}) {
+      print "Fixing $sdopts_file\n";
+      open(OUTPUT,">",$sdopts_file);
+      print OUTPUT "$sdopts_line\n";
+      close(OUTPUT)
+    }
+  }
+  return;
 }
 
 # Subroutine to check that /var/ace exists
@@ -526,8 +537,6 @@ sub var_ace_check {
       system("rm $tmp_file");
     }
   }
-  $sdconf_file=check_file_exists($sdconf_file);
-  $sdopts_file=check_file_exists($sdopts_file);
   check_file_perms($sdconf_file,"root","root","640");
   check_file_perms($sdopts_file,"root","root","640");
   check_sdopts();
@@ -557,7 +566,7 @@ sub pam_sudo_check {
     }
   }
   else {
-    if (-f "$pam_file") {
+    if (-e "$pam_file") {
       $pam_check=`cat $pam_file |grep securid |grep -v '^#'`;
       if ($pam_check=~/securid/) {
         print "RSA SecurID PAM Agent enabled\n";
@@ -602,7 +611,7 @@ sub opt_pam_check {
 sub sudo_group_check {
   my $sudoers=$_[0];
   my $group_check;
-  if (-f "$sudoers") {
+  if (-e "$sudoers") {
     $group_check=`cat $sudoers |grep '\%$admin_group' |grep -v '^#'`;
     if ($group_check!~/$admin_group/) {
       print "File $sudoers does not contain a \%$admin_group entry\n";
@@ -710,7 +719,7 @@ sub get_sudoers {
   my $line;
   foreach $etc_dir (@etc_dirs) {
     $sudoetc="$etc_dir/sudoers";
-    if (-f "$sudoetc") {
+    if (-e "$sudoetc") {
       if ($option{'c'}) {
         print "Sudoers file found at $sudoetc\n";
       }
@@ -728,7 +737,7 @@ sub get_sudo_bin {
   my @file_info;
   foreach $bin_dir (@bin_dirs) {
     $sudo_bin="$bin_dir/sudo";
-    if (-f "$sudo_bin") {
+    if (-e "$sudo_bin") {
       if ($option{'c'}) {
         print "Sudo found at $sudo_bin\n";
       }
