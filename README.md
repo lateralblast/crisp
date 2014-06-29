@@ -23,7 +23,7 @@ Usage
 -----
 
 ```
-# crisp.pl -[h|V|c]
+# crisp.pl -[h|V|c|i|u]
 
 -V: Print version information
 -h: Print help
