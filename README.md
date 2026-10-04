@@ -12,22 +12,31 @@ A Perl script to check a RSA SecurID PAM Agent installation.
 This script can also be used to create a SHAR (Shell Archive) file with package
 embedded in the script.
 
+Version
+-------
+
+Current version: 0.5.0
+
+See CHANGELOG.md for the history of changes.
+
 License
 -------
 
-This software is licensed as CC-BA (Creative Commons By Attrbution)
+This software is licensed as CC BY-NC-SA 4.0 (Creative Commons
+Attribution-NonCommercial-ShareAlike). See the LICENSE file.
 
-http://creativecommons.org/licenses/by/4.0/legalcode
+https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 
 Usage
 -----
 
 ```
-# crisp.pl -[h|V|c|i|u]
+# crisp.pl -[h|V|c|f|I|i|u]
 
 -V: Print version information
 -h: Print help
 -c: Check RSA installation
+-f: Fix RSA installation
 -I: Create install script with embedded binary
 -i: Install RSA SecurID PAM Agent
 -u: Uninstall RSA SecurID PAM Agent
@@ -76,3 +85,11 @@ To uninstall the agent:
 ```
 $ rsainstall.pl -u
 ```
+
+Help Support Development
+------------------------
+
+If you find this software useful and would like to support its development,
+please consider buying me a coffee:
+
+https://ko-fi.com/richardatlateralblast
